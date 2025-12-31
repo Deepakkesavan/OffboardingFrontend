@@ -111,7 +111,7 @@ const StepperComponent: React.FC = () => {
 
 
 
-  const isStepOptional = (step: number) => false;
+  const isStepOptional = (_index?: number) => false;
 
   const isStepSkipped = (step: number) => skippedSteps.has(step);
 
@@ -147,17 +147,6 @@ const StepperComponent: React.FC = () => {
 
   const handleBack = () => setActiveStep((prev) => prev - 1);
 
-  const handleSkip = () => {
-    if (!isStepOptional(activeStep)) {
-      throw new Error("This step is not optional and cannot be skipped");
-    }
-
-    const newSkipped = new Set(skippedSteps);
-    newSkipped.add(activeStep);
-
-    setSkippedSteps(newSkipped);
-    setActiveStep((prev) => prev + 1);
-  };
 
   const handleReset = () => {
     setActiveStep(0);
