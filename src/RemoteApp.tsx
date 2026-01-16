@@ -5,7 +5,7 @@ import "./index.css";
 
 const RemoteApp = () => (
   <StrictMode>
-    <BrowserRouter basename="offboarding">
+    <BrowserRouter basename="/offboarding">
       <App />
     </BrowserRouter>
   </StrictMode>

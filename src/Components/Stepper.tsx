@@ -106,12 +106,7 @@ const StepperComponent: React.FC = () => {
   const [form3Submitted, setForm3Submitted] = useState(false);
   const [form4Submitted, setForm4Submitted] = useState(false);
   const [form5Submitted, setForm5Submitted] = useState(false);
-
-
-
-
-
-  const isStepOptional = (_index?: number) => false;
+  const isStepOptional = (_step: number) => false;
 
   const isStepSkipped = (step: number) => skippedSteps.has(step);
 
