@@ -1,0 +1,118 @@
+/* ExitClearanceForm.css */
+.exit-clearance-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-lg, 24px);
+}
+
+/* Summary card */
+.ecf-summary-card { padding: 20px 24px; }
+
+.ecf-summary-row {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.ecf-summary-item {
+  flex: 1;
+  padding: 16px 20px;
+  text-align: center;
+  border-right: 1px solid var(--clr-border);
+}
+
+.ecf-summary-item:last-child { border-right: none; }
+
+.ecf-summary-label {
+  font-size: .75rem;
+  font-weight: 500;
+  color: var(--clr-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 6px;
+}
+
+.ecf-summary-val {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--clr-text);
+  line-height: 1;
+}
+
+/* Progress bar */
+.ecf-progress-bar-wrap {
+  height: 8px;
+  background: var(--clr-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.ecf-progress-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width .4s ease;
+}
+
+/* Department list */
+.ecf-dept-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ecf-dept-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--clr-border);
+  transition: background .15s;
+}
+
+.ecf-dept-row:last-child { border-bottom: none; }
+
+.ecf-dept-row:hover { background: var(--clr-surface-2); }
+
+.ecf-dept-row--cleared { background: color-mix(in srgb, var(--clr-success) 5%, transparent); }
+
+.ecf-dept-icon {
+  font-size: 1.6rem;
+  width: 40px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.ecf-dept-info { flex: 1; }
+
+.ecf-dept-name {
+  font-weight: 600;
+  font-size: .9rem;
+  color: var(--clr-text);
+  margin-bottom: 2px;
+}
+
+.ecf-dept-desc {
+  font-size: .78rem;
+  color: var(--clr-text-muted);
+}
+
+.ecf-dept-cleared-by {
+  font-size: .78rem;
+  color: var(--clr-success);
+  margin-top: 4px;
+}
+
+.ecf-dept-notes {
+  color: var(--clr-text-muted);
+  font-style: italic;
+}
+
+.ecf-dept-locked-note {
+  font-size: .78rem;
+  color: var(--clr-warning);
+  margin-top: 4px;
+}
+
+.ecf-dept-status { flex-shrink: 0; }

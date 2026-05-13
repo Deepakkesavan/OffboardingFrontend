@@ -1,0 +1,46 @@
+/* StatCard.css */
+.stat-card-wrap {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg, 12px);
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: box-shadow .2s;
+}
+
+.stat-card-wrap:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,.08);
+}
+
+.stat-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-card-icon {
+  font-size: 1.1rem;
+}
+
+.stat-card-label {
+  font-size: .8rem;
+  font-weight: 500;
+  color: var(--clr-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+.stat-card-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--clr-text);
+  line-height: 1;
+}
+
+.stat-card-note {
+  font-size: .75rem;
+  color: var(--clr-text-muted);
+  margin-top: 2px;
+}

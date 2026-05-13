@@ -1,0 +1,26 @@
+/* Badge.css — pill-style status badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .3px;
+  white-space: nowrap;
+}
+
+.badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.badge-success  { background: var(--clr-success-bg);  color: var(--clr-success); }
+.badge-warning  { background: var(--clr-warning-bg);  color: var(--clr-warning); }
+.badge-danger   { background: var(--clr-danger-bg);   color: var(--clr-danger);  }
+.badge-info     { background: var(--clr-info-bg);     color: var(--clr-info);    }
+.badge-primary  { background: var(--clr-primary-bg);  color: var(--clr-primary); }
+.badge-neutral  { background: var(--clr-surface-2);   color: var(--clr-text-muted); }

@@ -1,0 +1,100 @@
+/* StakeholderClearance.css */
+.sc-progress-track {
+  height: 8px;
+  background: var(--clr-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.sc-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width .4s ease;
+}
+
+/* Cards grid */
+.sc-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sc-card {
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md, 8px);
+  padding: 16px 20px;
+  background: var(--clr-surface);
+  transition: box-shadow .2s, border-color .2s;
+}
+
+.sc-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,.07); }
+
+.sc-card--cleared {
+  border-color: var(--clr-success-bg);
+  background: color-mix(in srgb, var(--clr-success) 5%, transparent);
+}
+
+.sc-card--locked {
+  opacity: .65;
+  pointer-events: none;
+}
+
+.sc-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.sc-dept-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  width: 36px;
+  text-align: center;
+}
+
+.sc-dept-info { flex: 1; }
+
+.sc-dept-name {
+  font-weight: 600;
+  font-size: .95rem;
+  color: var(--clr-text);
+  margin-bottom: 2px;
+}
+
+.sc-dept-desc {
+  font-size: .8rem;
+  color: var(--clr-text-muted);
+}
+
+.sc-dept-badge { flex-shrink: 0; }
+
+/* Cleared meta */
+.sc-cleared-meta {
+  margin-top: 10px;
+  font-size: .8rem;
+  color: var(--clr-success);
+  padding-top: 10px;
+  border-top: 1px solid var(--clr-border);
+}
+
+.sc-cleared-notes {
+  color: var(--clr-text-muted);
+  font-style: italic;
+}
+
+/* Action row */
+.sc-action-row {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--clr-border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sc-locked-note {
+  margin-top: 10px;
+  font-size: .78rem;
+  color: var(--clr-warning);
+  padding-top: 10px;
+  border-top: 1px solid var(--clr-border);
+}

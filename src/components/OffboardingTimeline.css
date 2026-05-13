@@ -1,0 +1,130 @@
+.timeline-wrap {
+    background: var(--clr-surface);
+    border: 1px solid var(--clr-border);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-xl);
+    margin-bottom: var(--sp-xl);
+    box-shadow: var(--shadow-sm);
+    overflow-x: auto;
+  }
+  
+  .timeline-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--sp-xl);
+  }
+  
+  .timeline-header h3 { font-size: .9375rem; }
+  
+  .timeline-steps {
+    display: flex;
+    align-items: flex-start;
+    position: relative;
+    min-width: 600px;
+  }
+  
+  /* ─── Connecting line behind dots ─── */
+  .timeline-steps::before {
+    content: '';
+    position: absolute;
+    top: 18px;
+    left: 32px;
+    right: 32px;
+    height: 2px;
+    background: var(--clr-border);
+    z-index: 0;
+  }
+  
+  .timeline-step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* ─── Progress fill overlay ─── */
+  .timeline-step.completed + .timeline-step::before,
+  .timeline-step.active + .timeline-step::before {
+    content: '';
+    position: absolute;
+    top: 18px;
+    right: 50%;
+    left: -50%;
+    height: 2px;
+    background: var(--clr-primary);
+    z-index: 0;
+  }
+  
+  .timeline-step.completed + .timeline-step.completed::before {
+    background: var(--clr-success);
+  }
+  
+  .step-dot {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 2px solid var(--clr-border);
+    background: var(--clr-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .9rem;
+    font-weight: 700;
+    color: var(--clr-text-muted);
+    margin-bottom: var(--sp-sm);
+    transition: all .25s ease;
+    position: relative;
+    z-index: 2;
+  }
+  
+  .timeline-step.completed .step-dot {
+    background: var(--clr-success);
+    border-color: var(--clr-success);
+    color: #fff;
+  }
+  
+  .timeline-step.active .step-dot {
+    background: var(--clr-primary);
+    border-color: var(--clr-primary);
+    color: #fff;
+    box-shadow: 0 0 0 4px var(--clr-primary-light);
+  }
+  
+  .timeline-step.locked .step-dot {
+    background: var(--clr-surface-2);
+    border-color: var(--clr-border);
+    color: var(--clr-text-muted);
+  }
+  
+  .step-label {
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--clr-text-muted);
+    text-align: center;
+    max-width: 90px;
+    line-height: 1.3;
+  }
+  
+  .timeline-step.active .step-label    { color: var(--clr-primary);  font-weight: 700; }
+  .timeline-step.completed .step-label { color: var(--clr-success);  }
+  
+  .step-date {
+    font-size: .7rem;
+    color: var(--clr-text-muted);
+    text-align: center;
+    margin-top: 2px;
+    font-family: var(--font-mono);
+  }
+  
+  /* ─── Pulse animation for active dot ─── */
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0 rgba(26,86,219,.35); }
+    70%  { box-shadow: 0 0 0 8px rgba(26,86,219,.0); }
+    100% { box-shadow: 0 0 0 0 rgba(26,86,219,.0); }
+  }
+  
+  .timeline-step.active .step-dot {
+    animation: pulse-ring 2s ease infinite;
+  }
