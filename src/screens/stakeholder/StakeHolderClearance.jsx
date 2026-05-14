@@ -19,7 +19,7 @@ function isFinanceUnlocked(endDate) {
   const diff = (new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24);
   return diff <= 2;
 }
-
+//UpdatedFileName
 export default function StakeholderClearance({ record }) {
   const queryClient = useQueryClient();
 

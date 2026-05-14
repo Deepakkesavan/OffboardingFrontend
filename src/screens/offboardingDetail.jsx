@@ -10,7 +10,7 @@ import ExitClearanceForm     from './employee/ExitClearanceForm';
 import ManagerApproval       from './manager/ManagerApproval';
 import HRInitiation          from './hr/HRInitiation';
 import ClearancesScreen      from './finance/ClearancesScreen';
-import StakeholderClearance  from './stakeholder/StakeholderClearance';
+import StakeholderClearance  from './stakeholder/StakeHolderClearance';
 import FinalApproval         from './hr/FinalApproval';
 
 /* which roles can act on each stage */
