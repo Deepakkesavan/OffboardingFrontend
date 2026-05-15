@@ -18,7 +18,7 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter basename="/workforce/offboarding">
         <div className="app-shell">
           <Sidebar />
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', marginLeft: '240px' }}>
@@ -38,4 +38,4 @@ export default function App() {
       </BrowserRouter>
     </QueryClientProvider>
   );
-}
+}

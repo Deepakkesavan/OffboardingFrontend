@@ -6,9 +6,9 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig(() => {
+export default defineConfig(({mode}) => {
   // Development URL
-  const base = "http://localhost:4207/";
+  const base = mode === "production" ? "/offui/" : "/";
 
   return {
     base,
@@ -26,6 +26,7 @@ export default defineConfig(() => {
           "react-dom": { singleton: true },
           "react-router-dom": { singleton: true },
         },
+        dts: false,
       }),
     ],
     server: {
