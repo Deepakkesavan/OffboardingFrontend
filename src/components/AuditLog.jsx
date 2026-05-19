@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
 import { getAuditLog } from '../api/offboardingApi';
+import { useFetch } from '../hooks/useFetch';
 import './AuditLog.css';
 
 const ACTION_LABELS = {
@@ -31,10 +31,10 @@ function formatDateTime(iso) {
 }
 
 export default function AuditLog({ recordId }) {
-  const { data: logs = [], isLoading } = useQuery({
-    queryKey: ['auditLog', recordId],
-    queryFn:  () => getAuditLog(recordId),
-  });
+  const { data: logs = [], isLoading } = useFetch(
+    () => getAuditLog(recordId),
+    [recordId]
+  );
 
   if (isLoading) return <div className="spinner-wrap"><div className="spinner" /></div>;
 
@@ -53,7 +53,7 @@ export default function AuditLog({ recordId }) {
       ) : (
         <div className="audit-timeline">
           {[...logs].reverse().map((log, idx) => {
-            const meta = ACTION_LABELS[log.action] || { label: log.action, icon: '•', variant: 'neutral' };
+            const meta  = ACTION_LABELS[log.action] || { label: log.action, icon: '•', variant: 'neutral' };
             const color = VARIANT_COLORS[meta.variant];
             const isLast = idx === logs.length - 1;
 

@@ -1,66 +1,56 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useFetch, useMutation } from '../../hooks/useFetch';
 import { getClearances, updateClearance, updateRecord, createStageData, addAuditEntry, updateStageData } from '../../api/offboardingApi';
 import { STAGES } from '../../store/offboardingStore';
 import useStore from '../../store/offboardingStore';
 
 const DEPT_ICONS = { IT: '💻', Finance: '💰', Admin: '🏠', Security: '🔐', HR: '👥' };
 
-/* T-2 check: is today within 2 days of endDate? */
 function isFinanceUnlocked(endDate) {
   if (!endDate) return false;
-  const end  = new Date(endDate);
-  const now  = new Date();
-  const diff = (end - now) / (1000 * 60 * 60 * 24);
+  const diff = (new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24);
   return diff <= 2;
 }
 
-export default function ClearancesScreen({ record, stageData }) {
-  const queryClient  = useQueryClient();
+export default function ClearancesScreen({ record, stageData, onStageChange }) {
   const { activeRole } = useStore();
 
-  const { data: clearances = [], isLoading } = useQuery({
-    queryKey: ['clearances', record.id],
-    queryFn:  () => getClearances(record.id),
-  });
+  const {
+    data: clearances = [],
+    isLoading,
+    refetch: refetchClearances,
+  } = useFetch(() => getClearances(record.id), [record.id]);
 
-  const clearanceStage = stageData.find(s => s.stageType === STAGES.CLEARANCES);
-  const isAllDone      = clearances.length > 0 && clearances.every(c => c.isCleared);
-
-  const allCleared = clearances.filter(c => c.isCleared).length;
+  const clearanceStage  = stageData.find(s => s.stageType === STAGES.CLEARANCES);
+  const isAllDone       = clearances.length > 0 && clearances.every(c => c.isCleared);
+  const allCleared      = clearances.filter(c => c.isCleared).length;
   const financeUnlocked = isFinanceUnlocked(record.endDate);
 
-  const clearMutation = useMutation({
-    mutationFn: async ({ clearance, notes }) => {
+  const { mutate: markCleared, isPending: isClearing } = useMutation(
+    async ({ clearance, notes }) => {
       await updateClearance(clearance.id, {
-        isCleared:  true,
-        clearedBy:  `${activeRole} user`,
-        clearedAt:  new Date().toISOString(),
+        isCleared: true,
+        clearedBy: `${activeRole} user`,
+        clearedAt: new Date().toISOString(),
         notes,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clearances', record.id], exact: false });
-    },
-  });
+    { onSuccess: refetchClearances }
+  );
 
-  const advanceMutation = useMutation({
-    mutationFn: async () => {
+  const { mutate: advance, isPending: isAdvancing } = useMutation(
+    async () => {
       const now = new Date().toISOString();
-
       if (clearanceStage) {
         await updateStageData(clearanceStage.id, { payload: {}, completedAt: now });
       }
-
       await createStageData({
         recordId:    record.id,
         stageType:   STAGES.FINAL_APPROVAL,
         payload:     {},
         completedAt: null,
       });
-
       await updateRecord(record.id, { currentStage: STAGES.FINAL_APPROVAL });
-
       await addAuditEntry({
         recordId:    record.id,
         action:      'all_clearances_done',
@@ -69,17 +59,13 @@ export default function ClearancesScreen({ record, stageData }) {
         stageAfter:  STAGES.FINAL_APPROVAL,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['record', record.id], exact: false });
-      queryClient.invalidateQueries({ queryKey: ['stageData', record.id], exact: false });
-    },
-  });
+    { onSuccess: onStageChange }
+  );
 
   if (isLoading) return <div className="spinner-wrap"><div className="spinner" /></div>;
 
   return (
     <div>
-      {/* T-2 alert for Finance */}
       {!financeUnlocked && (
         <div className="alert alert-warning">
           ⏳ Finance clearance is locked. It will unlock 2 days before the employee's last working date
@@ -93,7 +79,6 @@ export default function ClearancesScreen({ record, stageData }) {
           <span className="badge badge-neutral">{allCleared} / {clearances.length} cleared</span>
         </div>
 
-        {/* Progress bar */}
         <div style={{ marginBottom: '24px' }}>
           <div style={{ height: '6px', background: 'var(--clr-border)', borderRadius: '3px', overflow: 'hidden' }}>
             <div style={{
@@ -116,8 +101,8 @@ export default function ClearancesScreen({ record, stageData }) {
               clearance={c}
               activeRole={activeRole}
               financeUnlocked={financeUnlocked}
-              onClear={(notes) => clearMutation.mutate({ clearance: c, notes })}
-              isProcessing={clearMutation.isPending}
+              onClear={(notes) => markCleared({ clearance: c, notes })}
+              isProcessing={isClearing}
             />
           ))}
         </div>
@@ -129,10 +114,10 @@ export default function ClearancesScreen({ record, stageData }) {
             </div>
             <button
               className="btn btn-primary"
-              onClick={() => advanceMutation.mutate()}
-              disabled={advanceMutation.isPending}
+              onClick={() => advance()}
+              disabled={isAdvancing}
             >
-              {advanceMutation.isPending ? 'Processing...' : 'Proceed to Final Approval →'}
+              {isAdvancing ? 'Processing...' : 'Proceed to Final Approval →'}
             </button>
           </div>
         )}
@@ -141,7 +126,7 @@ export default function ClearancesScreen({ record, stageData }) {
   );
 }
 
-function ClearanceRow({ clearance, activeRole, financeUnlocked, onClear, isProcessing }) {
+function ClearanceRow({ clearance, financeUnlocked, onClear, isProcessing }) {
   const [showForm, setShowForm] = useState(false);
   const [notes,    setNotes]    = useState('');
 
@@ -150,7 +135,7 @@ function ClearanceRow({ clearance, activeRole, financeUnlocked, onClear, isProce
 
   return (
     <div style={{
-      border: `1px solid ${clearance.isCleared ? 'var(--clr-success-bg)' : locked ? 'var(--clr-border)' : 'var(--clr-border)'}`,
+      border: `1px solid ${clearance.isCleared ? 'var(--clr-success-bg)' : 'var(--clr-border)'}`,
       borderRadius: 'var(--radius-md)',
       padding: '16px',
       background: clearance.isCleared ? 'var(--clr-success-bg)' : locked ? 'var(--clr-surface-2)' : 'var(--clr-surface)',
@@ -178,13 +163,8 @@ function ClearanceRow({ clearance, activeRole, financeUnlocked, onClear, isProce
             ? <span className="badge badge-warning">🔒 Locked</span>
             : <span className="badge badge-neutral">Pending</span>
           }
-
           {!clearance.isCleared && !locked && (
-            <button
-              className="btn btn-success btn-sm"
-              onClick={() => setShowForm(f => !f)}
-              disabled={isProcessing}
-            >
+            <button className="btn btn-success btn-sm" onClick={() => setShowForm(f => !f)} disabled={isProcessing}>
               Mark Cleared
             </button>
           )}

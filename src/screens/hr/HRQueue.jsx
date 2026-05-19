@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { getRecords } from '../../api/offboardingApi';
+import { useFetch } from '../../hooks/useFetch';
 import PageHeader from '../../components/PageHeader';
 import Badge from '../../components/Badge';
 import { STAGE_BADGE } from '../../components/stageBadge';
 import StatCard from '../../components/StatCard';
+import { exitDetailPath } from '../../app.routes';
 import './HRQueue.css';
 
 const FILTER_OPTIONS = [
-  { value: 'all',            label: 'All' },
+  { value: 'all',            label: 'All'              },
   { value: 'hr_initiation',  label: 'Needs Initiation' },
   { value: 'clearances',     label: 'In Clearances'    },
   { value: 'final_approval', label: 'Final Approval'   },
@@ -18,8 +19,7 @@ const FILTER_OPTIONS = [
 
 function daysUntil(dateStr) {
   if (!dateStr) return null;
-  const diff = Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24));
-  return diff;
+  return Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24));
 }
 
 function DaysChip({ endDate }) {
@@ -33,21 +33,21 @@ function DaysChip({ endDate }) {
 
 export default function HRQueue() {
   const navigate = useNavigate();
-  const [filter,  setFilter]  = useState('all');
-  const [search,  setSearch]  = useState('');
-  const [sortBy,  setSortBy]  = useState('submittedAt');
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('submittedAt');
 
-  const { data: records = [], isLoading } = useQuery({
-    queryKey:        ['records'],
-    queryFn:         getRecords,
-    refetchInterval: 10000,
-  });
+  const { data: records = [], isLoading } = useFetch(
+    getRecords,
+    [],
+    { refetchInterval: 10000 }
+  );
 
   const stats = {
-    needsAction:  records.filter(r => ['hr_initiation', 'final_approval'].includes(r.currentStage)).length,
-    inProgress:   records.filter(r => r.currentStage === 'clearances').length,
-    urgentT2:     records.filter(r => { const d = daysUntil(r.endDate); return d !== null && d <= 2 && r.currentStage !== 'completed'; }).length,
-    completed:    records.filter(r => r.currentStage === 'completed').length,
+    needsAction: records.filter(r => ['hr_initiation', 'final_approval'].includes(r.currentStage)).length,
+    inProgress:  records.filter(r => r.currentStage === 'clearances').length,
+    urgentT2:    records.filter(r => { const d = daysUntil(r.endDate); return d !== null && d <= 2 && r.currentStage !== 'completed'; }).length,
+    completed:   records.filter(r => r.currentStage === 'completed').length,
   };
 
   const filtered = records
@@ -60,7 +60,7 @@ export default function HRQueue() {
         || r.department?.toLowerCase().includes(q);
     })
     .sort((a, b) => {
-      if (sortBy === 'endDate')     return new Date(a.endDate) - new Date(b.endDate);
+      if (sortBy === 'endDate')      return new Date(a.endDate) - new Date(b.endDate);
       if (sortBy === 'employeeName') return a.employeeName.localeCompare(b.employeeName);
       return new Date(b.submittedAt) - new Date(a.submittedAt);
     });
@@ -71,24 +71,22 @@ export default function HRQueue() {
     <div>
       <PageHeader
         title="HR Queue"
-        subtitle="All offboarding cases requiring HR attention."
+        subtitle="All exit cases requiring HR attention."
         actions={
-          <button className="btn btn-primary btn-sm" onClick={() => navigate('/new')}>
+          <button className="btn btn-primary btn-sm" onClick={() => navigate('/initiate')}>
             + New Request
           </button>
         }
       />
 
-      {/* Stats */}
       <div className="stat-grid" style={{ marginBottom: 'var(--sp-xl)' }}>
-        <StatCard label="Needs action"   value={stats.needsAction}  color="var(--clr-primary)" icon="⚡" />
-        <StatCard label="In clearances"  value={stats.inProgress}   color="var(--clr-warning)" icon="🔄" />
-        <StatCard label="Urgent (T-2)"   value={stats.urgentT2}     color="var(--clr-danger)"  icon="⚠"
+        <StatCard label="Needs action"  value={stats.needsAction} color="var(--clr-primary)" icon="⚡" />
+        <StatCard label="In clearances" value={stats.inProgress}  color="var(--clr-warning)" icon="🔄" />
+        <StatCard label="Urgent (T-2)"  value={stats.urgentT2}    color="var(--clr-danger)"  icon="⚠"
           note={stats.urgentT2 > 0 ? 'Ending within 2 days' : null} />
-        <StatCard label="Completed"      value={stats.completed}    color="var(--clr-success)" icon="✅" />
+        <StatCard label="Completed"     value={stats.completed}   color="var(--clr-success)" icon="✅" />
       </div>
 
-      {/* Filters + search */}
       <div className="hrq-toolbar card" style={{ padding: '12px 20px' }}>
         <div className="hrq-filter-tabs">
           {FILTER_OPTIONS.map(opt => (
@@ -114,11 +112,7 @@ export default function HRQueue() {
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-          <select
-            className="hrq-sort"
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value)}
-          >
+          <select className="hrq-sort" value={sortBy} onChange={e => setSortBy(e.target.value)}>
             <option value="submittedAt">Sort: Newest</option>
             <option value="endDate">Sort: End date</option>
             <option value="employeeName">Sort: Name</option>
@@ -126,7 +120,6 @@ export default function HRQueue() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="card" style={{ marginTop: 'var(--sp-md)' }}>
         {filtered.length === 0 ? (
           <div className="empty-state" style={{ padding: '48px 24px' }}>
@@ -150,8 +143,8 @@ export default function HRQueue() {
               </thead>
               <tbody>
                 {filtered.map(r => {
-                  const badge   = STAGE_BADGE[r.currentStage] || STAGE_BADGE.exit_interview;
-                  const days    = daysUntil(r.endDate);
+                  const badge    = STAGE_BADGE[r.currentStage] || STAGE_BADGE.exit_interview;
+                  const days     = daysUntil(r.endDate);
                   const isUrgent = days !== null && days <= 2 && r.currentStage !== 'completed';
 
                   return (
@@ -161,9 +154,7 @@ export default function HRQueue() {
                         <div className="hrq-emp-id">{r.employeeId}</div>
                       </td>
                       <td>{r.department}</td>
-                      <td>
-                        <Badge variant={badge.variant} dot>{badge.label}</Badge>
-                      </td>
+                      <td><Badge variant={badge.variant} dot>{badge.label}</Badge></td>
                       <td className="hrq-mono">
                         {new Date(r.submittedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                       </td>
@@ -174,10 +165,7 @@ export default function HRQueue() {
                       </td>
                       <td><DaysChip endDate={r.endDate} /></td>
                       <td>
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          onClick={() => navigate(`/offboarding/${r.id}`)}
-                        >
+                        <button className="btn btn-ghost btn-sm" onClick={() => navigate(exitDetailPath(r.id))}>
                           Open →
                         </button>
                       </td>

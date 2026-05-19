@@ -1,25 +1,17 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '../../hooks/useFetch';
 import { updateStageData, updateRecord, addAuditEntry, createStageData } from '../../api/offboardingApi';
 import { STAGES } from '../../store/offboardingStore';
 
-/* 90-day notice period calculator */
 function calculate90Days(submittedAt) {
   if (!submittedAt) return { noticeEndDate: '', daysRemaining: null };
-  const submit = new Date(submittedAt);
-  const noticeEnd = new Date(submit);
+  const noticeEnd = new Date(submittedAt);
   noticeEnd.setDate(noticeEnd.getDate() + 90);
-  const now = new Date();
-  const daysRemaining = Math.max(0, Math.ceil((noticeEnd - now) / (1000 * 60 * 60 * 24)));
-  return {
-    noticeEndDate:  noticeEnd.toISOString().split('T')[0],
-    daysRemaining,
-  };
+  const daysRemaining = Math.max(0, Math.ceil((noticeEnd - new Date()) / (1000 * 60 * 60 * 24)));
+  return { noticeEndDate: noticeEnd.toISOString().split('T')[0], daysRemaining };
 }
 
-export default function FinalApproval({ record, stageData }) {
-  const queryClient = useQueryClient();
-
+export default function FinalApproval({ record, stageData, onStageChange }) {
   const finalStage  = stageData.find(s => s.stageType === STAGES.FINAL_APPROVAL);
   const isCompleted = !!finalStage?.completedAt;
   const saved       = finalStage?.payload || {};
@@ -27,36 +19,34 @@ export default function FinalApproval({ record, stageData }) {
   const { noticeEndDate, daysRemaining } = calculate90Days(record.submittedAt);
 
   const [form, setForm] = useState({
-    /* Resignation form fields */
-    resignationLetter:     saved.resignationLetter     || '',
-    lastWorkingDate:       saved.lastWorkingDate       || record.endDate || '',
-    relievingDate:         saved.relievingDate         || noticeEndDate   || '',
-    /* HR final approval fields — all editable per requirement */
-    noticePeriodStart:     saved.noticePeriodStart     || record.submittedAt?.split('T')[0] || '',
-    noticePeriodEnd:       saved.noticePeriodEnd       || noticeEndDate || '',
-    actualNoticeDays:      saved.actualNoticeDays      || '90',
-    fullAndFinalDate:      saved.fullAndFinalDate      || '',
-    gratuityApplicable:    saved.gratuityApplicable    || 'No',
-    pfTransfer:            saved.pfTransfer            || 'No',
-    exitBonus:             saved.exitBonus             || 'No',
-    exitBonusAmount:       saved.exitBonusAmount       || '',
-    experienceLetterDate:  saved.experienceLetterDate  || '',
-    hrComments:            saved.hrComments            || '',
-    approvedBy:            saved.approvedBy            || '',
+    resignationLetter:    saved.resignationLetter    || '',
+    lastWorkingDate:      saved.lastWorkingDate      || record.endDate || '',
+    relievingDate:        saved.relievingDate        || noticeEndDate  || '',
+    noticePeriodStart:    saved.noticePeriodStart    || record.submittedAt?.split('T')[0] || '',
+    noticePeriodEnd:      saved.noticePeriodEnd      || noticeEndDate || '',
+    actualNoticeDays:     saved.actualNoticeDays     || '90',
+    fullAndFinalDate:     saved.fullAndFinalDate     || '',
+    gratuityApplicable:   saved.gratuityApplicable   || 'No',
+    pfTransfer:           saved.pfTransfer           || 'No',
+    exitBonus:            saved.exitBonus            || 'No',
+    exitBonusAmount:      saved.exitBonusAmount      || '',
+    experienceLetterDate: saved.experienceLetterDate || '',
+    hrComments:           saved.hrComments           || '',
+    approvedBy:           saved.approvedBy           || '',
   });
 
   const onChange = f => e => setForm(s => ({ ...s, [f]: e.target.value }));
 
   const missingFields = [
-    !form.lastWorkingDate  && 'Last Working Date',
-    !form.resignationLetter.trim() && 'Resignation Letter / Statement',
-    !form.approvedBy.trim()        && 'Approved By (HR Manager)',
+    !form.lastWorkingDate              && 'Last Working Date',
+    !form.resignationLetter.trim()     && 'Resignation Letter / Statement',
+    !form.approvedBy.trim()            && 'Approved By (HR Manager)',
   ].filter(Boolean);
 
   const canSubmit = missingFields.length === 0;
 
-  const mutation = useMutation({
-    mutationFn: async () => {
+  const { mutate, isPending } = useMutation(
+    async () => {
       const now = new Date().toISOString();
 
       if (finalStage) {
@@ -70,12 +60,8 @@ export default function FinalApproval({ record, stageData }) {
         });
       }
 
-      await updateRecord(record.id, {
-        currentStage: STAGES.COMPLETED,
-        status:       'completed',
-      });
+      await updateRecord(record.id, { currentStage: STAGES.COMPLETED, status: 'completed' });
 
-      /* Mark COMPLETED stage */
       await createStageData({
         recordId:    record.id,
         stageType:   STAGES.COMPLETED,
@@ -91,11 +77,8 @@ export default function FinalApproval({ record, stageData }) {
         stageAfter:  STAGES.COMPLETED,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['record', record.id] });
-      queryClient.invalidateQueries({ queryKey: ['stageData', record.id] });
-    },
-  });
+    { onSuccess: onStageChange }
+  );
 
   return (
     <div>
@@ -105,11 +88,9 @@ export default function FinalApproval({ record, stageData }) {
           <span className="card-title">📄 Resignation Form</span>
           <span className="badge badge-info">Must complete before HR Final Approval</span>
         </div>
-
         <div className="alert alert-warning">
-          ⚠ Please fill in the resignation details below. This must be completed before HR can issue final approval.
+          ⚠ Please fill in the resignation details below before HR can issue final approval.
         </div>
-
         <div className="form-grid">
           <div className="form-group">
             <label>Employee Name</label>
@@ -135,7 +116,7 @@ export default function FinalApproval({ record, stageData }) {
         </div>
       </div>
 
-      {/* ─── HR Final Approval Form ─── */}
+      {/* ─── HR Final Approval ─── */}
       <div className="card">
         <div className="card-header">
           <span className="card-title">🎯 HR Final Approval</span>
@@ -145,44 +126,22 @@ export default function FinalApproval({ record, stageData }) {
           }
         </div>
 
-        {/* 90-day notice info box */}
-        <div style={{
-          background: 'var(--clr-primary-light)',
-          border: '1px solid #bfdbfe',
-          borderRadius: 'var(--radius-md)',
-          padding: '16px',
-          marginBottom: '24px',
-          display: 'flex',
-          gap: '24px',
-          flexWrap: 'wrap',
-        }}>
+        {/* Notice period info */}
+        <div style={{ background: 'var(--clr-primary-light)', border: '1px solid #bfdbfe', borderRadius: 'var(--radius-md)', padding: '16px', marginBottom: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
           <div>
-            <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--clr-primary)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
-              Exit Submitted
-            </div>
-            <div style={{ fontSize: '1rem', fontWeight: 600, marginTop: '4px' }}>
-              {new Date(record.submittedAt).toLocaleDateString('en-IN')}
-            </div>
+            <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--clr-primary)', textTransform: 'uppercase', letterSpacing: '.06em' }}>Exit Submitted</div>
+            <div style={{ fontSize: '1rem', fontWeight: 600, marginTop: '4px' }}>{new Date(record.submittedAt).toLocaleDateString('en-IN')}</div>
           </div>
           <div>
-            <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--clr-primary)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
-              90-Day Notice Ends
-            </div>
-            <div style={{ fontSize: '1rem', fontWeight: 600, marginTop: '4px' }}>
-              {new Date(noticeEndDate).toLocaleDateString('en-IN')}
-            </div>
+            <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--clr-primary)', textTransform: 'uppercase', letterSpacing: '.06em' }}>90-Day Notice Ends</div>
+            <div style={{ fontSize: '1rem', fontWeight: 600, marginTop: '4px' }}>{new Date(noticeEndDate).toLocaleDateString('en-IN')}</div>
           </div>
           <div>
-            <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--clr-primary)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
-              Days Remaining
-            </div>
+            <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--clr-primary)', textTransform: 'uppercase', letterSpacing: '.06em' }}>Days Remaining</div>
             <div style={{ fontSize: '1rem', fontWeight: 600, marginTop: '4px', color: daysRemaining <= 10 ? 'var(--clr-danger)' : 'var(--clr-text-primary)' }}>
               {daysRemaining} days
             </div>
           </div>
-          <p style={{ width: '100%', margin: 0, fontSize: '.8rem', color: 'var(--clr-primary)' }}>
-            ℹ All fields below are editable. The notice period dates are pre-calculated from the exit submission date (+ 90 days).
-          </p>
         </div>
 
         <div className="section-title">Notice Period Details (Editable)</div>
@@ -245,8 +204,7 @@ export default function FinalApproval({ record, stageData }) {
         <div className="form-grid cols-1">
           <div className="form-group">
             <label>Approved By (HR Manager) <span className="required-star">*</span></label>
-            <input value={form.approvedBy} onChange={onChange('approvedBy')} readOnly={isCompleted}
-              placeholder="HR Manager name" />
+            <input value={form.approvedBy} onChange={onChange('approvedBy')} readOnly={isCompleted} placeholder="HR Manager name" />
           </div>
           <div className="form-group">
             <label>HR Comments / Notes</label>
@@ -277,10 +235,10 @@ export default function FinalApproval({ record, stageData }) {
               </p>
               <button
                 className="btn btn-success btn-lg"
-                onClick={() => mutation.mutate()}
-                disabled={mutation.isPending || !canSubmit}
+                onClick={() => mutate()}
+                disabled={isPending || !canSubmit}
               >
-                {mutation.isPending ? 'Processing...' : '🎯 Issue Final Approval & Close Offboarding'}
+                {isPending ? 'Processing...' : '🎯 Issue Final Approval & Close Offboarding'}
               </button>
             </div>
           </div>

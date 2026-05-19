@@ -1,66 +1,57 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createRecord } from '../api/offboardingApi';
+import { useMutation } from '../hooks/useFetch';
 import { STAGES } from '../store/offboardingStore';
+import { exitDetailPath } from '../app.routes';
 
 const DEPARTMENTS = ['Engineering', 'Design', 'Product', 'Finance', 'HR', 'Marketing', 'Sales', 'Operations'];
-const REASONS = ['Resignation', 'Retirement', 'End of Contract', 'Mutual Separation', 'Other'];
+const REASONS     = ['Resignation', 'Retirement', 'End of Contract', 'Mutual Separation', 'Other'];
 
 export default function NewRequest() {
-  const navigate      = useNavigate();
-  const queryClient   = useQueryClient();
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({
-    employeeName:  '',
-    employeeId:    '',
-    designation:   '',
-    department:    '',
-    email:         '',
-    manager:       '',
-    endDate:       '',
-    exitReason:    '',
-    exitDetails:   '',
-    jobDescription:'',
-    noticePeriod:  '90',
+    employeeName:   '',
+    employeeId:     '',
+    designation:    '',
+    department:     '',
+    email:          '',
+    manager:        '',
+    endDate:        '',
+    exitReason:     '',
+    exitDetails:    '',
+    jobDescription: '',
+    noticePeriod:   '90',
   });
 
   const [errors, setErrors] = useState({});
 
-  const mutation = useMutation({
-    mutationFn: async (data) => {
-      /*
-        The .NET backend automatically creates:
-          - The exit_interview StageData row
-          - The first audit log entry
-        when POST /api/offboarding-records is called.
-        So we only need one API call here.
-      */
+  const { mutate, isPending, isError } = useMutation(
+    async (data) => {
       const record = await createRecord({
         ...data,
         currentStage: STAGES.EXIT_INTERVIEW,
         status:       'active',
         submittedAt:  new Date().toISOString(),
       });
-
       return record;
     },
-    onSuccess: (record) => {
-      queryClient.invalidateQueries({ queryKey: ['records'] });
-      navigate(`/offboarding/${record.id}`);
-    },
-  });
+    {
+      onSuccess: (record) => navigate(exitDetailPath(record.id)),
+    }
+  );
 
   const validate = () => {
     const e = {};
-    if (!form.employeeName.trim())  e.employeeName  = 'Required';
-    if (!form.employeeId.trim())    e.employeeId    = 'Required';
-    if (!form.designation.trim())   e.designation   = 'Required';
-    if (!form.department)           e.department    = 'Required';
-    if (!form.email.trim())         e.email         = 'Required';
-    if (!form.manager.trim())       e.manager       = 'Required';
-    if (!form.endDate)              e.endDate       = 'Required';
-    if (!form.exitReason)           e.exitReason    = 'Required';
+    if (!form.employeeName.trim()) e.employeeName  = 'Required';
+    if (!form.employeeId.trim())   e.employeeId    = 'Required';
+    if (!form.designation.trim())  e.designation   = 'Required';
+    if (!form.department)          e.department    = 'Required';
+    if (!form.email.trim())        e.email         = 'Required';
+    if (!form.manager.trim())      e.manager       = 'Required';
+    if (!form.endDate)             e.endDate       = 'Required';
+    if (!form.exitReason)          e.exitReason    = 'Required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -70,14 +61,14 @@ export default function NewRequest() {
 
   const onSubmit = (e) => {
     e.preventDefault();
-    if (validate()) mutation.mutate(form);
+    if (validate()) mutate(form);
   };
 
   return (
     <div>
       <div className="page-header">
-        <h1>New Offboarding Request</h1>
-        <p>Fill in the employee details to initiate the offboarding process.</p>
+        <h1>Initiate Exit</h1>
+        <p>Fill in the employee details to begin the offboarding process.</p>
       </div>
 
       <form onSubmit={onSubmit}>
@@ -176,7 +167,7 @@ export default function NewRequest() {
           </div>
         </div>
 
-        {mutation.isError && (
+        {isError && (
           <div className="alert alert-danger">
             ⚠ Failed to create request. Please try again.
           </div>
@@ -186,8 +177,8 @@ export default function NewRequest() {
           <button type="button" className="btn btn-ghost" onClick={() => navigate('/')}>
             Cancel
           </button>
-          <button type="submit" className="btn btn-primary btn-lg" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Creating...' : 'Initiate Offboarding →'}
+          <button type="submit" className="btn btn-primary btn-lg" disabled={isPending}>
+            {isPending ? 'Creating...' : 'Initiate Offboarding →'}
           </button>
         </div>
       </form>

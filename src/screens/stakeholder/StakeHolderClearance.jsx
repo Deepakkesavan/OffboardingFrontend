@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useFetch, useMutation } from '../../hooks/useFetch';
 import { getClearances, updateClearance, addAuditEntry } from '../../api/offboardingApi';
 import Badge from '../../components/Badge';
 import { ConfirmModal } from '../../components/Modal';
@@ -16,35 +16,36 @@ const DEPT_DESCS = {
 
 function isFinanceUnlocked(endDate) {
   if (!endDate) return false;
-  const diff = (new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24);
-  return diff <= 2;
+  return (new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24) <= 2;
 }
-//UpdatedFileName
+
 export default function StakeholderClearance({ record }) {
-  const queryClient = useQueryClient();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [activeClear, setActiveClear] = useState(null);
+  const [notes,       setNotes]       = useState('');
 
-  const [confirmOpen,  setConfirmOpen]  = useState(false);
-  const [activeClear,  setActiveClear]  = useState(null);
-  const [notes,        setNotes]        = useState('');
-
-  const { data: clearances = [], isLoading } = useQuery({
-    queryKey:        ['clearances', record.id],
-    queryFn:         () => getClearances(record.id),
-    refetchInterval: 8000,
-  });
+  const {
+    data: clearances = [],
+    isLoading,
+    refetch,
+  } = useFetch(
+    () => getClearances(record.id),
+    [record.id],
+    { refetchInterval: 8000 }
+  );
 
   const financeUnlocked = isFinanceUnlocked(record.endDate);
-  const cleared   = clearances.filter(c => c.isCleared).length;
-  const total     = clearances.length;
+  const cleared = clearances.filter(c => c.isCleared).length;
+  const total   = clearances.length;
 
-  const clearMutation = useMutation({
-    mutationFn: async () => {
+  const { mutate: confirmClear, isPending } = useMutation(
+    async () => {
       const now = new Date().toISOString();
       await updateClearance(activeClear.id, {
-        isCleared:  true,
-        clearedBy:  'Stakeholder',
-        clearedAt:  now,
-        notes:      notes.trim() || null,
+        isCleared: true,
+        clearedBy: 'Stakeholder',
+        clearedAt: now,
+        notes:     notes.trim() || null,
       });
       await addAuditEntry({
         recordId:    record.id,
@@ -54,13 +55,15 @@ export default function StakeholderClearance({ record }) {
         stageAfter:  'clearances',
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clearances', record.id] });
-      setConfirmOpen(false);
-      setActiveClear(null);
-      setNotes('');
-    },
-  });
+    {
+      onSuccess: () => {
+        refetch();
+        setConfirmOpen(false);
+        setActiveClear(null);
+        setNotes('');
+      },
+    }
+  );
 
   const handleClearClick = (clearance) => {
     setActiveClear(clearance);
@@ -72,7 +75,6 @@ export default function StakeholderClearance({ record }) {
 
   return (
     <div>
-      {/* T-2 reminder banner */}
       {!financeUnlocked && (
         <div className="alert alert-warning">
           ⏳ Finance clearance is locked until 2 days before the employee's last working date
@@ -87,7 +89,6 @@ export default function StakeholderClearance({ record }) {
           <span className="badge badge-neutral">{cleared} / {total} done</span>
         </div>
 
-        {/* Progress */}
         <div style={{ marginBottom: 'var(--sp-lg)' }}>
           <div className="sc-progress-track">
             <div
@@ -103,7 +104,6 @@ export default function StakeholderClearance({ record }) {
           </p>
         </div>
 
-        {/* Clearance cards */}
         <div className="sc-cards">
           {clearances.map(c => {
             const isFinance = c.department === 'Finance';
@@ -142,7 +142,7 @@ export default function StakeholderClearance({ record }) {
                     <button
                       className="btn btn-success btn-sm"
                       onClick={() => handleClearClick(c)}
-                      disabled={clearMutation.isPending}
+                      disabled={isPending}
                     >
                       ✓ Mark as Cleared
                     </button>
@@ -166,15 +166,14 @@ export default function StakeholderClearance({ record }) {
         )}
       </div>
 
-      {/* Confirm modal */}
       <ConfirmModal
         open={confirmOpen}
         onClose={() => { setConfirmOpen(false); setActiveClear(null); }}
-        onConfirm={() => clearMutation.mutate()}
+        onConfirm={() => confirmClear()}
         title={`Confirm ${activeClear?.department} Clearance`}
         confirmLabel="Confirm Clearance"
         confirmVariant="btn-success"
-        loading={clearMutation.isPending}
+        loading={isPending}
         message={
           <div>
             <p style={{ marginBottom: '16px' }}>

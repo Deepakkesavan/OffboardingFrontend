@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '../../hooks/useFetch';
 import {
   updateStageData, updateRecord, addAuditEntry, createStageData, createClearance
 } from '../../api/offboardingApi';
@@ -7,14 +7,12 @@ import { STAGES } from '../../store/offboardingStore';
 
 const CLEARANCE_DEPTS = ['IT', 'Finance', 'Admin', 'Security', 'HR'];
 
-export default function HRInitiation({ record, stageData }) {
-  const queryClient = useQueryClient();
-
-  const hrStage     = stageData.find(s => s.stageType === STAGES.HR_INITIATION);
+export default function HRInitiation({ record, stageData, onStageChange }) {
+  const hrStage    = stageData.find(s => s.stageType === STAGES.HR_INITIATION);
   const isCompleted = !!hrStage?.completedAt;
   const saved       = hrStage?.payload || {};
 
-  const managerStage  = stageData.find(s => s.stageType === STAGES.MANAGER_REVIEW);
+  const managerStage   = stageData.find(s => s.stageType === STAGES.MANAGER_REVIEW);
   const managerPayload = managerStage?.payload || {};
 
   const [form, setForm] = useState({
@@ -27,8 +25,8 @@ export default function HRInitiation({ record, stageData }) {
 
   const onChange = f => e => setForm(s => ({ ...s, [f]: e.target.value }));
 
-  const mutation = useMutation({
-    mutationFn: async () => {
+  const { mutate, isPending } = useMutation(
+    async () => {
       const now = new Date().toISOString();
 
       if (hrStage) {
@@ -42,19 +40,17 @@ export default function HRInitiation({ record, stageData }) {
         });
       }
 
-      /* Create clearance rows for each dept */
       for (const dept of CLEARANCE_DEPTS) {
         await createClearance({
-          recordId:    record.id,
-          department:  dept,
-          isUnlocked:  dept === 'Finance' ? false : true, /* Finance unlocks at T-2 */
-          isCleared:   false,
-          clearedBy:   null,
-          clearedAt:   null,
+          recordId:   record.id,
+          department: dept,
+          isUnlocked: dept !== 'Finance',
+          isCleared:  false,
+          clearedBy:  null,
+          clearedAt:  null,
         });
       }
 
-      /* Create clearances stage_data */
       await createStageData({
         recordId:    record.id,
         stageType:   STAGES.CLEARANCES,
@@ -72,12 +68,8 @@ export default function HRInitiation({ record, stageData }) {
         stageAfter:  STAGES.CLEARANCES,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['record', record.id], exact: false });
-      queryClient.invalidateQueries({ queryKey: ['stageData', record.id], exact: false });
-      queryClient.invalidateQueries({ queryKey: ['clearances', record.id], exact: false });
-    },
-  });
+    { onSuccess: onStageChange }
+  );
 
   return (
     <div className="card">
@@ -89,7 +81,6 @@ export default function HRInitiation({ record, stageData }) {
         }
       </div>
 
-      {/* Summary from previous stages */}
       <div style={{ background: 'var(--clr-surface-2)', borderRadius: 'var(--radius-md)', padding: '16px', marginBottom: '24px', border: '1px solid var(--clr-border)' }}>
         <div className="section-title">Case Summary</div>
         <div className="form-grid">
@@ -121,32 +112,27 @@ export default function HRInitiation({ record, stageData }) {
       </div>
 
       <div className="section-title">HR Offboarding Setup</div>
-
       <div className="form-grid">
         <div className="form-group">
           <label>HR Owner / POC {!isCompleted && <span className="required-star">*</span>}</label>
           <input value={form.hrOwner} onChange={onChange('hrOwner')} readOnly={isCompleted}
             placeholder="Name of HR handling this case" />
         </div>
-
         <div className="form-group">
           <label>Asset Return Plan</label>
           <input value={form.assetReturn} onChange={onChange('assetReturn')} readOnly={isCompleted}
             placeholder="Laptop, access cards, etc." />
         </div>
-
         <div className="form-group">
           <label>System Access Revocation</label>
           <input value={form.systemAccess} onChange={onChange('systemAccess')} readOnly={isCompleted}
             placeholder="Email, VPN, tools..." />
         </div>
-
         <div className="form-group">
           <label>Payroll Notes</label>
           <input value={form.payrollNotes} onChange={onChange('payrollNotes')} readOnly={isCompleted}
             placeholder="Final salary, leaves, etc." />
         </div>
-
         <div className="form-group full-width">
           <label>Offboarding Plan / Notes</label>
           <textarea value={form.offboardingPlan} onChange={onChange('offboardingPlan')} readOnly={isCompleted}
@@ -154,7 +140,6 @@ export default function HRInitiation({ record, stageData }) {
         </div>
       </div>
 
-      {/* Clearances that will be triggered */}
       <div style={{ marginTop: '20px' }}>
         <div className="section-title">Clearances to be initiated</div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
@@ -176,10 +161,10 @@ export default function HRInitiation({ record, stageData }) {
         <div className="form-actions">
           <button
             className="btn btn-primary"
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending || !form.hrOwner}
+            onClick={() => mutate()}
+            disabled={isPending || !form.hrOwner}
           >
-            {mutation.isPending ? 'Initiating...' : '🚀 Initiate Offboarding & Send Clearances →'}
+            {isPending ? 'Initiating...' : '🚀 Initiate Offboarding & Send Clearances →'}
           </button>
         </div>
       )}

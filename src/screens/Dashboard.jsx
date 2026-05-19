@@ -1,33 +1,34 @@
-import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { getRecords } from '../api/offboardingApi';
+import { useFetch } from '../hooks/useFetch';
 import useStore from '../store/offboardingStore';
+import { exitDetailPath } from '../app.routes';
 
 const STATUS_BADGE = {
-  exit_interview: { cls: 'badge-info', label: 'Exit Interview' },
+  exit_interview: { cls: 'badge-info',    label: 'Exit Interview' },
   manager_review: { cls: 'badge-warning', label: 'Manager Review' },
-  hr_initiation: { cls: 'badge-primary', label: 'HR Initiation' },
-  clearances: { cls: 'badge-warning', label: 'Clearances' },
-  final_approval: { cls: 'badge-danger', label: 'Final Approval' },
-  completed: { cls: 'badge-success', label: 'Completed' },
+  hr_initiation:  { cls: 'badge-primary', label: 'HR Initiation'  },
+  clearances:     { cls: 'badge-warning', label: 'Clearances'     },
+  final_approval: { cls: 'badge-danger',  label: 'Final Approval' },
+  completed:      { cls: 'badge-success', label: 'Completed'      },
 };
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { currentUser } = useStore();
 
-  const { data: records = [], isLoading } = useQuery({ queryKey: ['records'], queryFn: getRecords });
+  const { data: records = [], isLoading } = useFetch(getRecords);
 
   const stats = {
-    total: records.length,
-    active: records.filter(r => r.currentStage !== 'completed').length,
+    total:     records.length,
+    active:    records.filter(r => r.currentStage !== 'completed').length,
     completed: records.filter(r => r.currentStage === 'completed').length,
-    pending: records.filter(r => ['manager_review', 'hr_initiation', 'final_approval'].includes(r.currentStage)).length,
+    pending:   records.filter(r =>
+      ['manager_review', 'hr_initiation', 'final_approval'].includes(r.currentStage)
+    ).length,
   };
 
-  if (isLoading) return (
-    <div className="spinner-wrap"><div className="spinner" /></div>
-  );
+  if (isLoading) return <div className="spinner-wrap"><div className="spinner" /></div>;
 
   return (
     <div>
@@ -36,7 +37,6 @@ export default function Dashboard() {
         <p>Here's an overview of all offboarding activity.</p>
       </div>
 
-      {/* Stat cards */}
       <div className="stat-grid">
         <div className="stat-card">
           <div className="stat-label">Total Requests</div>
@@ -56,11 +56,10 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Records table */}
       <div className="card">
         <div className="card-header">
-          <span className="card-title">All Offboarding Records</span>
-          <button className="btn btn-primary btn-sm" onClick={() => navigate('/new')}>
+          <span className="card-title">All Exit Cases</span>
+          <button className="btn btn-primary btn-sm" onClick={() => navigate('/initiate')}>
             + New Request
           </button>
         </div>
@@ -68,10 +67,10 @@ export default function Dashboard() {
         {records.length === 0 ? (
           <div className="empty-state">
             <div className="icon">📭</div>
-            <h3>No offboarding records yet</h3>
+            <h3>No exit cases yet</h3>
             <p>Create a new request to get started.</p>
-            <button className="btn btn-primary" style={{ marginTop: '16px' }} onClick={() => navigate('/new')}>
-              Create First Request
+            <button className="btn btn-primary" style={{ marginTop: '16px' }} onClick={() => navigate('/initiate')}>
+              Initiate First Exit
             </button>
           </div>
         ) : (
@@ -107,7 +106,7 @@ export default function Dashboard() {
                       <td>
                         <button
                           className="btn btn-ghost btn-sm"
-                          onClick={() => navigate(`/offboarding/${r.id}`)}
+                          onClick={() => navigate(exitDetailPath(r.id))}
                         >
                           View →
                         </button>

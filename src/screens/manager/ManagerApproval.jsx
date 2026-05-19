@@ -1,33 +1,31 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '../../hooks/useFetch';
 import { createStageData, updateRecord, addAuditEntry, updateStageData } from '../../api/offboardingApi';
 import { STAGES } from '../../store/offboardingStore';
 
-export default function ManagerApproval({ record, stageData }) {
-  const queryClient = useQueryClient();
-
+export default function ManagerApproval({ record, stageData, onStageChange }) {
   const managerStage = stageData.find(s => s.stageType === STAGES.MANAGER_REVIEW);
   const isCompleted  = !!managerStage?.completedAt;
   const saved        = managerStage?.payload || {};
 
-  const exitStage    = stageData.find(s => s.stageType === STAGES.EXIT_INTERVIEW);
-  const exitPayload  = exitStage?.payload || {};
+  const exitStage   = stageData.find(s => s.stageType === STAGES.EXIT_INTERVIEW);
+  const exitPayload = exitStage?.payload || {};
 
   const [form, setForm] = useState({
-    scheduledDate:       saved.scheduledDate       || '',
-    scheduledTime:       saved.scheduledTime       || '',
-    interviewMode:       saved.interviewMode       || 'In-Person',
-    managerNotes:        saved.managerNotes        || '',
-    handoverPlan:        saved.handoverPlan        || '',
-    approvalDecision:    saved.approvalDecision    || '',
-    rejectionReason:     saved.rejectionReason     || '',
+    scheduledDate:    saved.scheduledDate    || '',
+    scheduledTime:    saved.scheduledTime    || '',
+    interviewMode:    saved.interviewMode    || 'In-Person',
+    managerNotes:     saved.managerNotes     || '',
+    handoverPlan:     saved.handoverPlan     || '',
+    approvalDecision: saved.approvalDecision || '',
+    rejectionReason:  saved.rejectionReason  || '',
   });
 
   const onChange = field => e => setForm(f => ({ ...f, [field]: e.target.value }));
 
-  const mutation = useMutation({
-    mutationFn: async (decision) => {
-      const now = new Date().toISOString();
+  const { mutate, isPending } = useMutation(
+    async (decision) => {
+      const now     = new Date().toISOString();
       const payload = { ...form, approvalDecision: decision };
 
       if (managerStage) {
@@ -59,11 +57,8 @@ export default function ManagerApproval({ record, stageData }) {
         stageAfter:  decision === 'approved' ? STAGES.HR_INITIATION : STAGES.MANAGER_REVIEW,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['record', record.id], exact: false });
-      queryClient.invalidateQueries({ queryKey: ['stageData', record.id], exact: false });
-    },
-  });
+    { onSuccess: onStageChange }
+  );
 
   const isApproved = saved.approvalDecision === 'approved';
   const isRejected = saved.approvalDecision === 'rejected';
@@ -80,7 +75,6 @@ export default function ManagerApproval({ record, stageData }) {
         }
       </div>
 
-      {/* Employee summary */}
       <div style={{ background: 'var(--clr-surface-2)', borderRadius: 'var(--radius-md)', padding: '16px', marginBottom: '24px', border: '1px solid var(--clr-border)' }}>
         <div className="section-title">Exit Interview Summary</div>
         <div className="form-grid">
@@ -103,7 +97,6 @@ export default function ManagerApproval({ record, stageData }) {
         </div>
       </div>
 
-      {/* Interview scheduling */}
       <div className="section-title">Schedule Exit Interview</div>
       <div className="form-grid" style={{ marginBottom: '24px' }}>
         <div className="form-group">
@@ -135,7 +128,6 @@ export default function ManagerApproval({ record, stageData }) {
           <textarea value={form.handoverPlan} onChange={onChange('handoverPlan')} readOnly={isCompleted} rows={3}
             placeholder="Describe the knowledge transfer and handover plan..." />
         </div>
-
         {isRejected && (
           <div className="form-group">
             <label>Rejection Reason</label>
@@ -156,17 +148,17 @@ export default function ManagerApproval({ record, stageData }) {
         <div className="form-actions">
           <button
             className="btn btn-danger btn-outline"
-            onClick={() => mutation.mutate('rejected')}
-            disabled={mutation.isPending}
+            onClick={() => mutate('rejected')}
+            disabled={isPending}
           >
             ✗ Reject Exit
           </button>
           <button
             className="btn btn-success"
-            onClick={() => mutation.mutate('approved')}
-            disabled={mutation.isPending || !form.scheduledDate}
+            onClick={() => mutate('approved')}
+            disabled={isPending || !form.scheduledDate}
           >
-            {mutation.isPending ? 'Processing...' : '✓ Approve & Forward to HR →'}
+            {isPending ? 'Processing...' : '✓ Approve & Forward to HR →'}
           </button>
         </div>
       )}

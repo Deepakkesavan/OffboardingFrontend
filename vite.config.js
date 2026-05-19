@@ -6,9 +6,9 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig(({mode}) => {
+export default defineConfig(() => {
   // Development URL
-  const base = mode === "production" ? "/offui/" : "/";
+  const base = "http://localhost:4207/";
 
   return {
     base,

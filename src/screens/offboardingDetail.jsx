@@ -1,19 +1,18 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { getRecord, getStageData } from '../api/offboardingApi';
+import { useFetch } from '../hooks/useFetch';
 import { STAGES } from '../store/offboardingStore';
 import useStore from '../store/offboardingStore';
-import OffboardingTimeline   from '../components/OffboardingTimeline';
-import AuditLog              from '../components/AuditLog';
-import ExitInterviewForm     from './employee/ExitInterviewForm';
-import ExitClearanceForm     from './employee/ExitClearanceForm';
-import ManagerApproval       from './manager/ManagerApproval';
-import HRInitiation          from './hr/HRInitiation';
-import ClearancesScreen      from './finance/ClearancesScreen';
-import StakeholderClearance  from './stakeholder/StakeHolderClearance';
-import FinalApproval         from './hr/FinalApproval';
+import OffboardingTimeline  from '../components/OffboardingTimeline';
+import AuditLog             from '../components/AuditLog';
+import ExitInterviewForm    from './employee/ExitInterviewForm';
+import ExitClearanceForm    from './employee/ExitClearanceForm';
+import ManagerApproval      from './manager/ManagerApproval';
+import HRInitiation         from './hr/HRInitiation';
+import ClearancesScreen     from './finance/ClearancesScreen';
+import StakeholderClearance from './stakeholder/StakeHolderClearance';
+import FinalApproval        from './hr/FinalApproval';
 
-/* which roles can act on each stage */
 const STAGE_ROLE_MAP = {
   [STAGES.EXIT_INTERVIEW]: ['employee'],
   [STAGES.MANAGER_REVIEW]: ['manager'],
@@ -35,11 +34,11 @@ function CompletedBanner() {
   );
 }
 
-function StageScreen({ record, stageData, activeRole }) {
-  const stage = record.currentStage;
+function StageScreen({ record, stageData, activeRole, onStageChange }) {
+  const stage        = record.currentStage;
   const allowedRoles = STAGE_ROLE_MAP[stage] || [];
-  const hasAccess = allowedRoles.includes(activeRole);
-  const props = { record, stageData };
+  const hasAccess    = allowedRoles.includes(activeRole);
+  const props        = { record, stageData, onStageChange };
 
   if (stage === STAGES.COMPLETED) return <CompletedBanner />;
 
@@ -59,7 +58,6 @@ function StageScreen({ record, stageData, activeRole }) {
     );
   }
 
-  /* role-aware rendering for clearances stage */
   if (stage === STAGES.CLEARANCES) {
     if (activeRole === 'stakeholder') return <StakeholderClearance {...props} />;
     return <ClearancesScreen {...props} />;
@@ -74,21 +72,19 @@ function StageScreen({ record, stageData, activeRole }) {
   }
 }
 
-/* Employee tab view — shows all three tabs when in exit_interview stage */
-function EmployeeTabs({ record, stageData, activeRole }) {
-  const stage = record.currentStage;
-
-  /* employee sees tabs only during their stage or clearances stage */
+function EmployeeTabs({ record, stageData, activeRole, onStageChange }) {
+  const stage    = record.currentStage;
   const showTabs =
     activeRole === 'employee' &&
     (stage === STAGES.EXIT_INTERVIEW || stage === STAGES.CLEARANCES);
 
-  if (!showTabs) return <StageScreen record={record} stageData={stageData} activeRole={activeRole} />;
+  if (!showTabs) {
+    return <StageScreen record={record} stageData={stageData} activeRole={activeRole} onStageChange={onStageChange} />;
+  }
 
   return (
     <div>
-      <StageScreen record={record} stageData={stageData} activeRole={activeRole} />
-      {/* Always show clearance status tab for employee */}
+      <StageScreen record={record} stageData={stageData} activeRole={activeRole} onStageChange={onStageChange} />
       <div style={{ marginTop: 'var(--sp-lg)' }}>
         <ExitClearanceForm record={record} stageData={stageData} />
       </div>
@@ -97,20 +93,27 @@ function EmployeeTabs({ record, stageData, activeRole }) {
 }
 
 export default function OffboardingDetail() {
-  const { id: rawId }  = useParams();
-  const id              = Number(rawId);  // ensure numeric — fixes invalidation mismatch
+  const { id }         = useParams();
   const navigate       = useNavigate();
   const { activeRole } = useStore();
 
-  const { data: record, isLoading: rLoad } = useQuery({
-    queryKey:        ['record', id],
-    queryFn:         () => getRecord(id),
-  });
+  const {
+    data: record,
+    isLoading: rLoad,
+    refetch: refetchRecord,
+  } = useFetch(() => getRecord(id), [id]);
 
-  const { data: stageData = [], isLoading: sLoad } = useQuery({
-    queryKey:        ['stageData', id],
-    queryFn:         () => getStageData(id),
-  });
+  const {
+    data: stageData = [],
+    isLoading: sLoad,
+    refetch: refetchStage,
+  } = useFetch(() => getStageData(id), [id]);
+
+  // Called by child stage screens after a mutation so the detail page re-fetches
+  const onStageChange = () => {
+    refetchRecord();
+    refetchStage();
+  };
 
   if (rLoad || sLoad) return <div className="spinner-wrap"><div className="spinner" /></div>;
 
@@ -128,7 +131,6 @@ export default function OffboardingDetail() {
 
   return (
     <div>
-      {/* Page header */}
       <div style={{ marginBottom: 'var(--sp-xl)' }}>
         <button
           className="btn btn-ghost btn-sm"
@@ -155,17 +157,19 @@ export default function OffboardingDetail() {
         </div>
       </div>
 
-      {/* Timeline */}
       <OffboardingTimeline
         currentStage={record.currentStage}
         stageData={stageData}
         record={record}
       />
 
-      {/* Active stage screen */}
-      <EmployeeTabs record={record} stageData={stageData} activeRole={activeRole} />
+      <EmployeeTabs
+        record={record}
+        stageData={stageData}
+        activeRole={activeRole}
+        onStageChange={onStageChange}
+      />
 
-      {/* Audit log — always at the bottom */}
       <div style={{ marginTop: 'var(--sp-xl)' }}>
         <AuditLog recordId={id} />
       </div>

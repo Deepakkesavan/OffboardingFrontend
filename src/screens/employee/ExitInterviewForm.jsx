@@ -1,46 +1,36 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '../../hooks/useFetch';
 import { updateStageData, updateRecord, addAuditEntry } from '../../api/offboardingApi';
 import { STAGES } from '../../store/offboardingStore';
 
 const RATINGS = ['1 - Very Poor', '2 - Poor', '3 - Average', '4 - Good', '5 - Excellent'];
 
-export default function ExitInterviewForm({ record, stageData }) {
-  const queryClient = useQueryClient();
-
+export default function ExitInterviewForm({ record, stageData, onStageChange }) {
   const exitStage   = stageData.find(s => s.stageType === STAGES.EXIT_INTERVIEW);
   const isSubmitted = !!exitStage?.completedAt;
   const saved       = exitStage?.payload || {};
 
   const [form, setForm] = useState({
-    overallRating:        saved.overallRating        || '',
-    managementRating:     saved.managementRating     || '',
-    workCultureRating:    saved.workCultureRating     || '',
-    growthRating:         saved.growthRating          || '',
-    primaryReason:        saved.primaryReason         || record.exitReason || '',
-    likedMost:            saved.likedMost             || '',
-    improvements:         saved.improvements          || '',
-    wouldRecommend:       saved.wouldRecommend        || '',
-    additionalComments:   saved.additionalComments    || '',
-    interviewDate:        saved.interviewDate         || '',
+    overallRating:      saved.overallRating      || '',
+    managementRating:   saved.managementRating   || '',
+    workCultureRating:  saved.workCultureRating  || '',
+    growthRating:       saved.growthRating        || '',
+    primaryReason:      saved.primaryReason       || record.exitReason || '',
+    likedMost:          saved.likedMost           || '',
+    improvements:       saved.improvements        || '',
+    wouldRecommend:     saved.wouldRecommend      || '',
+    additionalComments: saved.additionalComments  || '',
+    interviewDate:      saved.interviewDate       || '',
   });
 
   const onChange = (field) => (e) =>
     setForm(f => ({ ...f, [field]: e.target.value }));
 
-  const mutation = useMutation({
-    mutationFn: async () => {
+  const { mutate, isPending, isError } = useMutation(
+    async () => {
       const now = new Date().toISOString();
-
-      await updateStageData(exitStage.id, {
-        payload:     form,
-        completedAt: now,
-      });
-
-      await updateRecord(record.id, {
-        currentStage: STAGES.MANAGER_REVIEW,
-      });
-
+      await updateStageData(exitStage.id, { payload: form, completedAt: now });
+      await updateRecord(record.id, { currentStage: STAGES.MANAGER_REVIEW });
       await addAuditEntry({
         recordId:    record.id,
         action:      'exit_interview_submitted',
@@ -49,13 +39,8 @@ export default function ExitInterviewForm({ record, stageData }) {
         stageAfter:  STAGES.MANAGER_REVIEW,
       });
     },
-    onSuccess: () => {
-      // Use exact: false so both string and number id variations are invalidated
-      queryClient.invalidateQueries({ queryKey: ['record'],    exact: false });
-      queryClient.invalidateQueries({ queryKey: ['stageData'], exact: false });
-      queryClient.invalidateQueries({ queryKey: ['auditLog'],  exact: false });
-    },
-  });
+    { onSuccess: onStageChange }
+  );
 
   return (
     <div className="card">
@@ -111,10 +96,10 @@ export default function ExitInterviewForm({ record, stageData }) {
 
       <div className="form-grid cols-3" style={{ marginBottom: '24px' }}>
         {[
-          { label: 'Overall Experience',  field: 'overallRating'     },
-          { label: 'Management',          field: 'managementRating'  },
-          { label: 'Work Culture',        field: 'workCultureRating' },
-          { label: 'Growth Opportunities',field: 'growthRating'      },
+          { label: 'Overall Experience',   field: 'overallRating'     },
+          { label: 'Management',           field: 'managementRating'  },
+          { label: 'Work Culture',         field: 'workCultureRating' },
+          { label: 'Growth Opportunities', field: 'growthRating'      },
         ].map(({ label, field }) => (
           <div key={field} className="form-group">
             <label>{label} {!isSubmitted && <span className="required-star">*</span>}</label>
@@ -131,29 +116,25 @@ export default function ExitInterviewForm({ record, stageData }) {
           <label>Primary Reason for Leaving {!isSubmitted && <span className="required-star">*</span>}</label>
           <input value={form.primaryReason} onChange={onChange('primaryReason')} readOnly={isSubmitted} />
         </div>
-
         <div className="form-group">
           <label>What did you like most about working here?</label>
           <textarea value={form.likedMost} onChange={onChange('likedMost')} readOnly={isSubmitted} rows={3} />
         </div>
-
         <div className="form-group">
           <label>What could the company improve?</label>
           <textarea value={form.improvements} onChange={onChange('improvements')} readOnly={isSubmitted} rows={3} />
         </div>
-
         <div className="form-group">
           <label>Would you recommend this company to others?</label>
           <select value={form.wouldRecommend} onChange={onChange('wouldRecommend')} disabled={isSubmitted}>
             <option value="">Select answer</option>
-            <option value="Definitely Yes">Definitely Yes</option>
-            <option value="Probably Yes">Probably Yes</option>
-            <option value="Not Sure">Not Sure</option>
-            <option value="Probably No">Probably No</option>
-            <option value="Definitely No">Definitely No</option>
+            <option>Definitely Yes</option>
+            <option>Probably Yes</option>
+            <option>Not Sure</option>
+            <option>Probably No</option>
+            <option>Definitely No</option>
           </select>
         </div>
-
         <div className="form-group">
           <label>Additional Comments</label>
           <textarea value={form.additionalComments} onChange={onChange('additionalComments')} readOnly={isSubmitted} rows={3} />
@@ -162,7 +143,7 @@ export default function ExitInterviewForm({ record, stageData }) {
 
       {!isSubmitted && (
         <>
-          {mutation.isError && (
+          {isError && (
             <div className="alert alert-danger">Failed to submit. Please try again.</div>
           )}
           <div className="form-actions">
@@ -171,10 +152,10 @@ export default function ExitInterviewForm({ record, stageData }) {
             </p>
             <button
               className="btn btn-primary"
-              onClick={() => mutation.mutate()}
-              disabled={mutation.isPending}
+              onClick={() => mutate()}
+              disabled={isPending}
             >
-              {mutation.isPending ? 'Submitting...' : 'Submit Exit Interview →'}
+              {isPending ? 'Submitting...' : 'Submit Exit Interview →'}
             </button>
           </div>
         </>

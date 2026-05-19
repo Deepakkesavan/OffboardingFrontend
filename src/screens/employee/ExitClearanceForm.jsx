@@ -1,10 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
 import { getClearances } from '../../api/offboardingApi';
+import { useFetch } from '../../hooks/useFetch';
 import Badge from '../../components/Badge';
 import './ExitClearanceForm.css';
 
-const DEPT_ICONS  = { IT: '💻', Finance: '💰', Admin: '🏠', Security: '🔐', HR: '👥' };
-const DEPT_DESCS  = {
+const DEPT_ICONS = { IT: '💻', Finance: '💰', Admin: '🏠', Security: '🔐', HR: '👥' };
+const DEPT_DESCS = {
   IT:       'Laptop, access cards, software licences, VPN, email revocation',
   Finance:  'Full & final settlement, payroll, expense claims, PF transfer',
   Admin:    'Office keys, ID card, parking pass, stationery items',
@@ -18,29 +18,27 @@ function formatDate(iso) {
 }
 
 export default function ExitClearanceForm({ record }) {
-  const { data: clearances = [], isLoading } = useQuery({
-    queryKey:        ['clearances', record.id],
-    queryFn:         () => getClearances(record.id),
-    refetchInterval: 8000,
-  });
+  const { data: clearances = [], isLoading } = useFetch(
+    () => getClearances(record.id),
+    [record.id],
+    { refetchInterval: 8000 }
+  );
 
-  const cleared  = clearances.filter(c => c.isCleared).length;
-  const total    = clearances.length;
-  const allDone  = total > 0 && cleared === total;
-  const pct      = total ? Math.round((cleared / total) * 100) : 0;
+  const cleared = clearances.filter(c => c.isCleared).length;
+  const total   = clearances.length;
+  const allDone = total > 0 && cleared === total;
+  const pct     = total ? Math.round((cleared / total) * 100) : 0;
 
   if (isLoading) return <div className="spinner-wrap"><div className="spinner" /></div>;
 
   return (
     <div className="exit-clearance-wrap">
-      {/* Info banner */}
       <div className="alert alert-info" style={{ marginBottom: 'var(--sp-xl)' }}>
         ℹ This page shows the status of your departmental clearances. Each department
         must sign off before your offboarding can proceed to final approval. You do not
         need to take any action here — this is a read-only view.
       </div>
 
-      {/* Progress summary card */}
       <div className="card ecf-summary-card">
         <div className="ecf-summary-row">
           <div className="ecf-summary-item">
@@ -61,7 +59,6 @@ export default function ExitClearanceForm({ record }) {
           </div>
         </div>
 
-        {/* Progress bar */}
         <div className="ecf-progress-bar-wrap">
           <div
             className="ecf-progress-bar-fill"
@@ -76,7 +73,6 @@ export default function ExitClearanceForm({ record }) {
         )}
       </div>
 
-      {/* Department rows */}
       <div className="card" style={{ marginTop: 'var(--sp-lg)' }}>
         <div className="card-header">
           <span className="card-title">Department Clearance Status</span>
@@ -93,7 +89,6 @@ export default function ExitClearanceForm({ record }) {
             {clearances.map(c => (
               <div key={c.id} className={`ecf-dept-row ${c.isCleared ? 'ecf-dept-row--cleared' : ''}`}>
                 <div className="ecf-dept-icon">{DEPT_ICONS[c.department] || '📋'}</div>
-
                 <div className="ecf-dept-info">
                   <div className="ecf-dept-name">{c.department}</div>
                   <div className="ecf-dept-desc">{DEPT_DESCS[c.department] || 'Department clearance'}</div>
@@ -107,7 +102,6 @@ export default function ExitClearanceForm({ record }) {
                     <div className="ecf-dept-locked-note">🔒 Unlocks 2 days before your last working date</div>
                   )}
                 </div>
-
                 <div className="ecf-dept-status">
                   {c.isCleared ? (
                     <Badge variant="success" dot>Cleared</Badge>
