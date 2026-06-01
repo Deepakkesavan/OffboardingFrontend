@@ -1,5 +1,9 @@
-# Logs
-logs
+node_modules/
+*.lock
+*.tgz
+
+
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,18 +11,38 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# dist/
+# dist-ssr/
+build/
+.vite/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+dist/
+node_modules/
+_mf_temp/
+.mf_temp/
+
+# .env
+# .env.local
+# .env.development.local
+# .env.test.local
+# .env.production.local
+
+.vscode/
+.history/
+.idea/
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+*.tsbuildinfo
+
+
+.dockerignore
+
+docker-compose.yml
+
+coverage/
