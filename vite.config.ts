@@ -1,58 +1,42 @@
 import { defineConfig} from "vite";
 import react from "@vitejs/plugin-react";
 import { federation } from "@module-federation/vite";
-import path from "path";
-
-export default defineConfig(() => {
-  // const env = loadEnv(mode, process.cwd());
-
-  const base = "/offui/";
-
-  // const entry = "https://people-dev.clarium.tech/orgui/remoteEntry.js";
 
 
+export default defineConfig(({}) => {
+  // This loads the correct .env file
+  // const env = loadEnv(mode, process.cwd(), "");
 
   return {
-    base,
+    base: "/offui/",
     plugins: [
       react(),
       federation({
-        name: "offboardingRemote",
+        name: "reactRemote",
         filename: "remoteEntry.js",
         exposes: {
-          './App': './src/RemoteApp.tsx',
-          './react': 'react',
-          './react-dom-client': 'react-dom/client',
+          "./App": "./src/RemoteApp.jsx",
         },
-        // remotes: {
-        //   orgchart: {
-        //     type: "module",
-        //     name: "orgchart",
-        //     entry: entry,
-        //   },
-        // },
         shared: {
-          react: { singleton: true, requiredVersion: '*' },
-          'react-dom': { singleton: true, requiredVersion: '*' },
-          'react-router-dom': { singleton: true, requiredVersion: '*' },
+          react: {
+            singleton: true,
+          },
+          "react-dom": {
+            singleton: true,
+          },
+          "react-router-dom": {
+            singleton: true,
+          },
         },
+        //When you remove shared, both the host app and the remote app load their own separate copy of React,
+        //so React exists twice in the browser. React hooks and context only work when there is a single React instance,
+        //so having two copies causes errors like “Invalid hook call”.
       }),
     ],
-
     preview: {
       port: 4207,
     },
-    resolve: {
-      alias: {
-        "@": path.resolve(__dirname, "src"),
-      },
-    },
-    build: {
-      target: "esnext",
-      outDir: "dist",
-      minify: false,
-      sourcemap: true,
-      cssCodeSplit: true,
-    },
   };
 });
+
+

@@ -1,12 +1,14 @@
-import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
-// @ts-ignore: support for CSS side-effect import
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import "./index.css";
+import App from "./App.tsx";
 
-import './index.css';
-import App from './App';
+// Mount to tms-root for CSS scoping isolation in micro-frontend
+const container = document.getElementById("tms-root");
+if (!container) throw new Error('Root element "tms-root" not found');
 
-createRoot(document.getElementById('root')!).render(
-    <BrowserRouter basename="/">
-      <App />
-    </BrowserRouter>
+createRoot(container).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
 );
